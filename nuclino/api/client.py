@@ -3,7 +3,7 @@ from typing import List, Union
 import requests
 from ratelimit import limits
 
-from nuclino.api.exceptions import NuclinoAPIException
+from nuclino.api.exceptions import raise_for_status_code
 from nuclino.api.utils import sleep_and_retry
 from nuclino.models.shared import NuclinoObject, get_loader
 
@@ -53,18 +53,34 @@ class Client:
         response: requests.models.Response
     ) -> Union[List, NuclinoObject, dict]:
         '''
-        General method that processes API responses. Raises error on HTTP
+        General method that processes API responses. Raises appropriate exceptions on HTTP
         errors, sends results to parser on 200 ok.
 
         :param response: response object, received after calling API.
+        :returns: Parsed response data
+        :raises: Various NuclinoHTTPException subclasses based on the error type
         '''
-        content = response.json()
+        try:
+            content = response.json()
+        except ValueError:
+            raise_for_status_code(
+                response.status_code,
+                "Invalid JSON response from API",
+                {"raw_content": response.text}
+            )
+
         if response.status_code != 200:
-            message = content.get('message', '')
-            raise NuclinoAPIException(f'{response.status_code}: {message}')
-        else:
-            data = content['data']
-            return self.parse(data)
+            message = content.get('message', 'Unknown error')
+            raise_for_status_code(response.status_code, message, content)
+        
+        if 'data' not in content:
+            raise_for_status_code(
+                500,
+                "API response missing 'data' field",
+                content
+            )
+            
+        return self.parse(content['data'])
 
     def parse(self, source: dict) -> Union[List, NuclinoObject, dict]:
         '''
