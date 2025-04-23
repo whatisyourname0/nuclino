@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
 
 from nuclino.api.client import Client
+from nuclino.api.exceptions import NuclinoValidationError
 from nuclino.api.types import BaseDeleteResponse
 from nuclino.models.item import Collection, Item
 
@@ -30,8 +31,11 @@ class ItemEndpoints:
         path = '/items'
         params = {}
 
+        if team_id is None and workspace_id is None:
+            raise NuclinoValidationError(status_code=400, message="Must specify either team_id or workspace_id")
+
         if team_id is not None and workspace_id is not None:
-            raise ValueError("Cannot specify both team_id and workspace_id")
+            raise NuclinoValidationError(status_code=400, message="Cannot specify both team_id and workspace_id")
 
         if team_id is not None:
             params['teamId'] = team_id

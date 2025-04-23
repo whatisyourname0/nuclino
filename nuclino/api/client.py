@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, TypeVar, Union
 
 import requests
 from ratelimit import limits
@@ -12,6 +12,7 @@ from nuclino.models.shared import NuclinoObject, get_loader
 BASE_URL = 'https://api.nuclino.com/v0'
 
 ResponseData = Union[List[NuclinoObject], NuclinoObject, Dict[str, Any]]
+T = TypeVar('T')
 
 def join_url(base_url: str, path: str) -> str:
     """
@@ -22,13 +23,7 @@ def join_url(base_url: str, path: str) -> str:
         path: The path to append (e.g., '/workspaces')
     
     Returns:
-        str: The properly joined URL
-    
-    Example:
-        >>> join_url('https://api.nuclino.com/v0', '/workspaces')
-        'https://api.nuclino.com/v0/workspaces'
-        >>> join_url('https://api.nuclino.com/v0/', '/workspaces/')
-        'https://api.nuclino.com/v0/workspaces'
+        The properly joined URL
     """
     return '/'.join(part.strip('/') for part in [base_url, path])
 
@@ -41,16 +36,7 @@ class Client:
     Attributes:
         session (requests.Session): The HTTP session used for making requests
         base_url (str): The base URL for all API requests
-        check_limit (Callable): Rate limiting function
-
-    Example:
-        >>> client = Client(api_key="your-api-key")
-        >>> workspace = client.get("/workspaces/123")
-        >>> print(workspace["name"])
-        
-        # Using as context manager
-        >>> with Client(api_key="your-api-key") as client:
-        ...     workspace = client.get("/workspaces/123")
+        check_limit (Callable[[], None]): Rate limiting function
     '''
 
     def __init__(
@@ -80,10 +66,9 @@ class Client:
         self.check_limit = sleep_and_retry()(
             limits(requests_per_minute, period=60)(lambda: None)
         )
-        self.session = requests.Session()
+        self.session: requests.Session = requests.Session()
         self.session.headers['Authorization'] = api_key
-        self.timer = None
-        self.base_url = base_url
+        self.base_url: str = base_url
 
     def __enter__(self) -> 'Client':
         """Enter the context manager."""
@@ -99,7 +84,7 @@ class Client:
 
     def _handle_response(
         self,
-        response: requests.models.Response
+        response: requests.Response
     ) -> ResponseData:
         '''
         Process an API response, handling errors and parsing the response data.
@@ -108,7 +93,7 @@ class Client:
             response: The response object from the API request
 
         Returns:
-            Union[List[NuclinoObject], NuclinoObject, dict]: The parsed response data.
+            The parsed response data:
             - For single objects: A NuclinoObject instance
             - For lists: A list of NuclinoObject instances
             - For other data: A dictionary
@@ -151,16 +136,10 @@ class Client:
             source: The raw response data dictionary from the API
 
         Returns:
-            Union[List[NuclinoObject], NuclinoObject, dict]: The parsed data
+            The parsed data:
             - For single objects: A NuclinoObject instance
             - For lists: A list of NuclinoObject instances
             - For other data: The original dictionary
-
-        Example:
-            >>> data = {"object": "workspace", "id": "123", "name": "My Workspace"}
-            >>> result = client.parse(data)
-            >>> isinstance(result, Workspace)
-            True
         '''
         if 'object' not in source:
             return source
@@ -182,7 +161,7 @@ class Client:
             params: Optional query parameters to include in the request
 
         Returns:
-            Union[List[NuclinoObject], NuclinoObject, dict]: The parsed response data
+            The parsed response data
 
         Raises:
             NuclinoHTTPException: If the request fails
@@ -200,7 +179,7 @@ class Client:
             path: The API endpoint path (e.g., '/items/123')
 
         Returns:
-            Union[List[NuclinoObject], NuclinoObject, dict]: The parsed response data
+            The parsed response data
 
         Raises:
             NuclinoHTTPException: If the request fails
@@ -216,22 +195,17 @@ class Client:
 
         Args:
             path: The API endpoint path (e.g., '/items')
-            data: The request body data to send
+            data: The request body data
 
         Returns:
-            Union[List[NuclinoObject], NuclinoObject, dict]: The parsed response data
+            The parsed response data
 
         Raises:
             NuclinoHTTPException: If the request fails
             NuclinoRateLimitError: If rate limit is exceeded
         """
-        headers = {'Content-Type': 'application/json'}
         self.check_limit()
-        response = self.session.post(
-            join_url(self.base_url, path),
-            json=data,
-            headers=headers
-        )
+        response = self.session.post(join_url(self.base_url, path), json=data)
         return self._handle_response(response)
 
     def put(self, path: str, data: Dict[str, Any]) -> ResponseData:
@@ -240,20 +214,15 @@ class Client:
 
         Args:
             path: The API endpoint path (e.g., '/items/123')
-            data: The request body data to send
+            data: The request body data
 
         Returns:
-            Union[List[NuclinoObject], NuclinoObject, dict]: The parsed response data
+            The parsed response data
 
         Raises:
             NuclinoHTTPException: If the request fails
             NuclinoRateLimitError: If rate limit is exceeded
         """
-        headers = {'Content-Type': 'application/json'}
         self.check_limit()
-        response = self.session.put(
-            join_url(self.base_url, path),
-            json=data,
-            headers=headers
-        )
+        response = self.session.put(join_url(self.base_url, path), json=data)
         return self._handle_response(response) 

@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, Dict, List, Optional, TypedDict, Union
 from .shared import NuclinoObject
 
 if TYPE_CHECKING:
+    from nuclino.api.client import Client
+
     from .file import File
     from .workspace import Workspace
 
@@ -63,15 +65,16 @@ class Item(NuclinoObject):
     def __init__(
         self,
         props: ItemProps,
-        nuclino
-    ):
+        nuclino: 'Client'
+    ) -> None:
         super().__init__(props, nuclino)
 
     def get_workspace(self) -> 'Workspace':
         '''
         Make an API call to get the workspace this item belongs to.
 
-        :returns: Workspace object.
+        Returns:
+            Workspace object.
         '''
         return self._nuclino.get_workspace(self["workspaceId"])
 
@@ -80,7 +83,8 @@ class Item(NuclinoObject):
         Make API calls to get list of items or collections that are referenced in
         this item.
 
-        :returns: list of Item or Collection objects.
+        Returns:
+            List of Item or Collection objects.
         '''
         return [self._nuclino.get_item(id_) for id_ in self["contentMeta"]["itemIds"]]
 
@@ -88,7 +92,8 @@ class Item(NuclinoObject):
         '''
         Make API calls to get the list of files attached to this file.
 
-        :returns: list of File objects.
+        Returns:
+            List of File objects.
         '''
         return [self._nuclino.get_file(id_) for id_ in self["contentMeta"]["fileIds"]]
 
@@ -96,7 +101,8 @@ class Item(NuclinoObject):
         '''
         Move this item to trash.
 
-        :returns: dictionary with this item id.
+        Returns:
+            Dictionary with this item id.
         '''
         return self._nuclino.delete_item(self["id"])
 
@@ -108,14 +114,16 @@ class Item(NuclinoObject):
         '''
         Update this item.
 
-        :param title: new item title.
-        :param content: new item content.
+        Args:
+            title: New item title.
+            content: New item content.
 
-        :returns: updated Item object.
+        Returns:
+            Updated Item object.
         '''
         return self._nuclino.update_item(self["id"], title, content)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<Item "{self["title"]}">'
 
 
@@ -135,15 +143,16 @@ class Collection(NuclinoObject):
     def __init__(
         self,
         props: CollectionProps,
-        nuclino
-    ):
+        nuclino: 'Client'
+    ) -> None:
         super().__init__(props, nuclino)
 
     def get_children(self) -> List[Union[Item, 'Collection']]:
         '''
         Make an API call to get the list of direct children of this collection.
 
-        :returns: list of Item and Collection objects.
+        Returns:
+            List of Item and Collection objects.
         '''
         return [self._nuclino.get_item(id_) for id_ in self["childIds"]]
 
@@ -151,7 +160,8 @@ class Collection(NuclinoObject):
         '''
         Make an API call to get the workspace this collection belongs to.
 
-        :returns: Workspace object.
+        Returns:
+            Workspace object.
         '''
         return self._nuclino.get_workspace(self["workspaceId"])
 
@@ -165,12 +175,14 @@ class Collection(NuclinoObject):
         '''
         Create an item or a collection under this collection.
 
-        :param object: 'item' or 'collection'.
-        :param title: item title.
-        :param content: item content.
-        :param index: where to put this item in the tree.
+        Args:
+            object: 'item' or 'collection'.
+            title: Item title.
+            content: Item content.
+            index: Where to put this item in the tree.
 
-        :returns: created Item or Collection object.
+        Returns:
+            Created Item or Collection object.
         '''
         return self._nuclino.create_item(
             parent_id=self["id"],
@@ -188,10 +200,12 @@ class Collection(NuclinoObject):
         '''
         Create another collection under this collection.
 
-        :param title: collection title.
-        :param index: where to put this collection in the tree.
+        Args:
+            title: Collection title.
+            index: Where to put this collection in the tree.
 
-        :returns: created Collection object.
+        Returns:
+            Created Collection object.
         '''
         return self._nuclino.create_item(
             parent_id=self["id"],
@@ -204,22 +218,25 @@ class Collection(NuclinoObject):
         '''
         Move this collection to trash.
 
-        :returns: dictionary with this collection ID.
+        Returns:
+            Dictionary with this collection id.
         '''
-        return self._nuclino.delete_collection(self["id"])
+        return self._nuclino.delete_item(self["id"])
 
     def update(
         self,
         title: Optional[str] = None
     ) -> 'Collection':
         '''
-        Change this collection title.
+        Update this collection.
 
-        :param title: new title value.
+        Args:
+            title: New collection title.
 
-        :returns: updated Collection object.
+        Returns:
+            Updated Collection object.
         '''
-        return self._nuclino.update_collection(self["id"], title)
+        return self._nuclino.update_item(self["id"], title)
 
     def __repr__(self) -> str:
         return f'<Collection "{self["title"]}">'
