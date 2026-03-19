@@ -1,13 +1,35 @@
 [project]
 name = "nuclino"
 version = "0.1.0"
-description = "Add your description here"
+description = "Python client for the Nuclino API"
+authors = [
+    {name = "Joonho Lee", email = "mynameisjune111@gmail.com"},
+]
+license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "ratelimit>=2.2.1",
     "requests>=2.32.3",
 ]
+keywords = ["nuclino", "api", "client"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.urls]
+Repository = "https://github.com/whatisyourname0/nuclino"
+Documentation = "https://github.com/whatisyourname0/nuclino#readme"
 
 [dependency-groups]
 dev = [
@@ -17,4 +39,29 @@ dev = [
     "pytest-cov>=6.1.1",
     "pytest-mock>=3.14.0",
     "ruff>=0.11.6",
+    "types-requests>=2.32.0.20250328",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["nuclino"]
+
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
+only-include = [
+    "nuclino",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+exclude = [
+    "/tests",
+    "/pytest.ini",
+    "/.gitignore",
+]
+
+[tool.mypy]
+python_version = "3.12"
+
+[[tool.mypy.overrides]]
+module = ["ratelimit", "ratelimit.*"]
+ignore_missing_imports = true
