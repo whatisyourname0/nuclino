@@ -4,13 +4,13 @@ A Python client library for interacting with the [Nuclino API](https://api.nucli
 
 ## Features
 
-- Full support for Nuclino API v0
-- Object-oriented interface with proper type hints
-- Automatic rate limiting handling
-- Comprehensive error handling
+- Typed client methods and object models
+- Support for core Nuclino API v0 resources
+- Configurable client-side request throttling
+- Structured exception hierarchy
 - Convenient helper methods for common operations
-- Support for both items and collections management
-- Built-in pagination handling
+- Support for items, collections, workspaces, teams, users, and files
+- Cursor-based list endpoints via `limit` and `after`
 
 ## Installation
 
@@ -67,32 +67,40 @@ The library provides detailed error handling with specific exception classes:
 - `NuclinoValidationError`: Invalid request parameters
 - `NuclinoNotFoundError`: Resource not found
 - `NuclinoRateLimitError`: Rate limit exceeded
+- `NuclinoTimeoutError`: Request timed out
 - `NuclinoServerError`: Server-side errors
 
 ### Rate Limiting
 
 Built-in rate limiting support helps prevent API quota exhaustion:
 
-- Automatic request rate monitoring
-- Built-in retry mechanism
+- Automatic client-side request throttling
+- Automatic retry handling for rate-limit responses
 - Configurable requests per minute limit
 
 ### Type Safety
 
-The library is fully typed with Python type hints:
+The library exposes typed client methods and model objects:
 
-- All methods have proper return type annotations
-- TypedDict definitions for API request/response data
+- Public methods have return type annotations
+- Models preserve the raw API payload while exposing Python-style attribute access
 - Support for IDE autocompletion
-- Mypy compatibility
+- Checked with mypy in CI
 
 ## API Reference
 
 ### Main Client
 
 ```python
-class Client:
-    def __init__(self, api_key: str, base_url: str = "https://api.nuclino.com/v0", requests_per_minute: int = 140)
+class NuclinoAPI:
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = "https://api.nuclino.com/v0",
+        requests_per_minute: int = 140,
+        timeout: float = 30.0,
+        rate_limit_retries: int = 3,
+    )
 ```
 
 ### Item Operations
@@ -110,7 +118,7 @@ def get_item(item_id: str) -> Union[Item, Collection]
 def create_item(
     workspace_id: Optional[str] = None,
     parent_id: Optional[str] = None,
-    object: str = 'item',
+    object: str = "item",
     title: Optional[str] = None,
     content: Optional[str] = None,
     index: Optional[int] = None
@@ -160,13 +168,23 @@ except NuclinoRateLimitError as e:
     print(f"Rate limit exceeded. Try again in {e.retry_after} seconds")
 ```
 
+## Development
+
+```bash
+uv sync --dev
+uv run ruff check .
+uv run mypy nuclino
+uv run pytest
+uv build
+```
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License. See the LICENSE file for details.
 
 ## Acknowledgments
 
