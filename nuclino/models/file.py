@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, TypedDict
 
-from .shared import NuclinoObject
+from .shared import NuclinoClient, NuclinoObject
 
 if TYPE_CHECKING:
     from .item import Item
@@ -34,8 +34,8 @@ class File(NuclinoObject):
     def __init__(
         self,
         props: FileProps,
-        nuclino
-    ):
+        nuclino: NuclinoClient
+    ) -> None:
         super().__init__(props, nuclino)
 
     def get_item(self) -> 'Item':

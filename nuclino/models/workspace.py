@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, List, Optional, TypedDict, Union
 
 from .field import FieldProps
-from .shared import NuclinoObject
+from .shared import NuclinoClient, NuclinoObject
 
 if TYPE_CHECKING:
     from .item import Collection, Item
@@ -32,8 +32,8 @@ class Workspace(NuclinoObject):
     def __init__(
         self,
         props: WorkspaceProps,
-        nuclino
-    ):
+        nuclino: NuclinoClient
+    ) -> None:
         super().__init__(props, nuclino)
 
     def get_team(self) -> 'Team':

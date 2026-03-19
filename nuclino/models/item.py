@@ -1,24 +1,24 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Dict, List, NotRequired, Optional, TypedDict, Union
 
-from .shared import NuclinoObject
+from .shared import NuclinoClient, NuclinoObject
 
 if TYPE_CHECKING:
-    from nuclino.api.client import Client
-
     from .file import File
     from .workspace import Workspace
 
-class ItemFields(TypedDict, total=False):
-    """Custom fields for items that can have any string key"""
-    pass
+ItemFields = dict[str, Any]
+
 
 class ContentMeta(TypedDict):
-    """Content metadata for items"""
+    """Content metadata for items."""
+
     itemIds: List[str]
     fileIds: List[str]
 
+
 class ItemProps(TypedDict):
-    """Item properties as per API specification"""
+    """Item properties as per API specification."""
+
     object: str
     id: str
     workspaceId: str
@@ -29,12 +29,14 @@ class ItemProps(TypedDict):
     lastUpdatedAt: str
     lastUpdatedUserId: str
     fields: ItemFields
-    content: Optional[str]
-    contentMeta: ContentMeta
-    highlight: Optional[str]
+    content: NotRequired[Optional[str]]
+    contentMeta: NotRequired[ContentMeta]
+    highlight: NotRequired[Optional[str]]
+
 
 class CollectionProps(TypedDict):
-    """Collection properties as per API specification"""
+    """Collection properties as per API specification."""
+
     object: str
     id: str
     workspaceId: str
@@ -45,9 +47,14 @@ class CollectionProps(TypedDict):
     lastUpdatedAt: str
     lastUpdatedUserId: str
     childIds: List[str]
+    content: NotRequired[Optional[str]]
+    contentMeta: NotRequired[ContentMeta]
+    highlight: NotRequired[Optional[str]]
+
 
 class Item(NuclinoObject):
-    """Item object as per API specification"""
+    """Item object as per API specification."""
+
     _object = "item"
     id: str
     workspace_id: str
@@ -65,53 +72,53 @@ class Item(NuclinoObject):
     def __init__(
         self,
         props: ItemProps,
-        nuclino: 'Client'
+        nuclino: NuclinoClient,
     ) -> None:
         super().__init__(props, nuclino)
 
     def get_workspace(self) -> 'Workspace':
-        '''
+        """
         Make an API call to get the workspace this item belongs to.
 
         Returns:
             Workspace object.
-        '''
+        """
         return self._nuclino.get_workspace(self["workspaceId"])
 
     def get_items(self) -> List[Union['Item', 'Collection']]:
-        '''
+        """
         Make API calls to get list of items or collections that are referenced in
         this item.
 
         Returns:
             List of Item or Collection objects.
-        '''
+        """
         return [self._nuclino.get_item(id_) for id_ in self["contentMeta"]["itemIds"]]
 
     def get_files(self) -> List['File']:
-        '''
-        Make API calls to get the list of files attached to this file.
+        """
+        Make API calls to get the list of files attached to this item.
 
         Returns:
             List of File objects.
-        '''
+        """
         return [self._nuclino.get_file(id_) for id_ in self["contentMeta"]["fileIds"]]
 
     def delete(self) -> Dict[str, str]:
-        '''
+        """
         Move this item to trash.
 
         Returns:
             Dictionary with this item id.
-        '''
+        """
         return self._nuclino.delete_item(self["id"])
 
     def update(
         self,
         title: Optional[str] = None,
-        content: Optional[str] = None
+        content: Optional[str] = None,
     ) -> 'Item':
-        '''
+        """
         Update this item.
 
         Args:
@@ -120,7 +127,7 @@ class Item(NuclinoObject):
 
         Returns:
             Updated Item object.
-        '''
+        """
         return self._nuclino.update_item(self["id"], title, content)
 
     def __repr__(self) -> str:
@@ -128,7 +135,8 @@ class Item(NuclinoObject):
 
 
 class Collection(NuclinoObject):
-    """Collection object as per API specification"""
+    """Collection object as per API specification."""
+
     _object = "collection"
     id: str
     workspace_id: str
@@ -139,30 +147,33 @@ class Collection(NuclinoObject):
     last_updated_at: str
     last_updated_user_id: str
     child_ids: List[str]
+    content: Optional[str]
+    content_meta: ContentMeta
+    highlight: Optional[str]
 
     def __init__(
         self,
         props: CollectionProps,
-        nuclino: 'Client'
+        nuclino: NuclinoClient,
     ) -> None:
         super().__init__(props, nuclino)
 
     def get_children(self) -> List[Union[Item, 'Collection']]:
-        '''
+        """
         Make an API call to get the list of direct children of this collection.
 
         Returns:
             List of Item and Collection objects.
-        '''
+        """
         return [self._nuclino.get_item(id_) for id_ in self["childIds"]]
 
     def get_workspace(self) -> 'Workspace':
-        '''
+        """
         Make an API call to get the workspace this collection belongs to.
 
         Returns:
             Workspace object.
-        '''
+        """
         return self._nuclino.get_workspace(self["workspaceId"])
 
     def create_item(
@@ -170,9 +181,9 @@ class Collection(NuclinoObject):
         object: str = 'item',
         title: Optional[str] = None,
         content: Optional[str] = None,
-        index: Optional[int] = None
+        index: Optional[int] = None,
     ) -> Union[Item, 'Collection']:
-        '''
+        """
         Create an item or a collection under this collection.
 
         Args:
@@ -183,21 +194,21 @@ class Collection(NuclinoObject):
 
         Returns:
             Created Item or Collection object.
-        '''
+        """
         return self._nuclino.create_item(
             parent_id=self["id"],
             object=object,
             title=title,
             content=content,
-            index=index
+            index=index,
         )
 
     def create_collection(
         self,
         title: Optional[str] = None,
-        index: Optional[int] = None
+        index: Optional[int] = None,
     ) -> 'Collection':
-        '''
+        """
         Create another collection under this collection.
 
         Args:
@@ -206,28 +217,28 @@ class Collection(NuclinoObject):
 
         Returns:
             Created Collection object.
-        '''
+        """
         return self._nuclino.create_item(
             parent_id=self["id"],
             object="collection",
             title=title,
-            index=index
+            index=index,
         )
 
     def delete(self) -> Dict[str, str]:
-        '''
+        """
         Move this collection to trash.
 
         Returns:
             Dictionary with this collection id.
-        '''
+        """
         return self._nuclino.delete_item(self["id"])
 
     def update(
         self,
-        title: Optional[str] = None
+        title: Optional[str] = None,
     ) -> 'Collection':
-        '''
+        """
         Update this collection.
 
         Args:
@@ -235,7 +246,7 @@ class Collection(NuclinoObject):
 
         Returns:
             Updated Collection object.
-        '''
+        """
         return self._nuclino.update_item(self["id"], title)
 
     def __repr__(self) -> str:

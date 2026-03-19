@@ -1,10 +1,11 @@
-from typing import Optional, TypedDict
+from typing import NotRequired, Optional, TypedDict
 
-from .shared import NuclinoObject
+from .shared import NuclinoClient, NuclinoObject
 
 
 class UserProps(TypedDict):
     """User properties as per API specification"""
+    object: NotRequired[str]
     id: str
     firstName: str
     lastName: str
@@ -20,7 +21,7 @@ class User(NuclinoObject):
     email: str
     avatar_url: Optional[str]
 
-    def __init__(self, props: UserProps, nuclino):
+    def __init__(self, props: UserProps, nuclino: NuclinoClient) -> None:
         super().__init__(props, nuclino)
 
     def __repr__(self) -> str:
