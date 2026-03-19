@@ -1,26 +1,29 @@
-from typing import Any, Dict, List, TypedDict, TypeVar, Union
+from typing import Any, Mapping, TypedDict, TypeVar, Union
 
-from nuclino.models.shared import NuclinoObject
+from nuclino.models.file import DownloadInfo
+from nuclino.models.item import ContentMeta
+from nuclino.models.shared import NuclinoList, NuclinoObject
 
 
 class BaseDeleteResponse(TypedDict):
-    """Response type for delete operations"""
+    """Response type for delete operations."""
+
     id: str
 
-class ContentMeta(TypedDict):
-    """Content metadata type"""
-    itemIds: List[str]
-    fileIds: List[str]
-
-class DownloadInfo(TypedDict):
-    """Download information type"""
-    url: str
-    expiresAt: str
 
 class ApiResponse(TypedDict):
-    """Generic API response type"""
-    data: Union[Dict[str, Any], List[Dict[str, Any]]]
+    """Generic API response type."""
 
-# Type variable for generic response handling
-T = TypeVar('T', bound=NuclinoObject)
-ResponseType = Union[List[T], T, BaseDeleteResponse] 
+    data: Mapping[str, Any]
+
+
+T = TypeVar("T", bound=NuclinoObject)
+ResponseType = Union[NuclinoList[T], T, BaseDeleteResponse, dict[str, Any]]
+
+__all__ = [
+    "ApiResponse",
+    "BaseDeleteResponse",
+    "ContentMeta",
+    "DownloadInfo",
+    "ResponseType",
+]
