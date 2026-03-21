@@ -34,11 +34,11 @@ Documentation = "https://github.com/whatisyourname0/nuclino#readme"
 [dependency-groups]
 dev = [
     "black>=25.1.0",
-    "mypy>=1.15.0",
     "pytest>=8.3.5",
     "pytest-cov>=6.1.1",
     "pytest-mock>=3.14.0",
     "ruff>=0.11.6",
+    "ty>=0.0.24",
     "types-requests>=2.32.0.20250328",
 ]
 
@@ -59,9 +59,5 @@ exclude = [
     "/.gitignore",
 ]
 
-[tool.mypy]
-python_version = "3.12"
-
-[[tool.mypy.overrides]]
-module = ["ratelimit", "ratelimit.*"]
-ignore_missing_imports = true
+[tool.ty.src]
+include = ["nuclino", "tests"]

@@ -24,7 +24,7 @@ jobs:
         run: uv run ruff check .
 
       - name: Type check
-        run: uv run mypy nuclino tests
+        run: uv run ty check
 
       - name: Test
         run: uv run pytest
