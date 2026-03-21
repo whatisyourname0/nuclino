@@ -1,6 +1,14 @@
+from collections.abc import Iterator
 from typing import Optional
 
-from nuclino.api.client import BASE_URL, DEFAULT_REQUEST_TIMEOUT, Client
+import requests
+
+from nuclino.api.client import (
+    BASE_URL,
+    DEFAULT_REQUEST_TIMEOUT,
+    DEFAULT_REQUESTS_PER_MINUTE,
+    Client,
+)
 from nuclino.api.endpoints.file import FileEndpoints
 from nuclino.api.endpoints.item import ItemEndpoints
 from nuclino.api.endpoints.team import TeamEndpoints
@@ -22,14 +30,18 @@ class Nuclino(Client):
         self,
         api_key: str,
         base_url: str = BASE_URL,
-        requests_per_minute: int = 140,
+        requests_per_minute: int = DEFAULT_REQUESTS_PER_MINUTE,
         request_timeout: float = DEFAULT_REQUEST_TIMEOUT,
+        max_rate_limit_retries: int = 3,
+        session: requests.Session | None = None,
     ) -> None:
         super().__init__(
             api_key=api_key,
             base_url=base_url,
             requests_per_minute=requests_per_minute,
             request_timeout=request_timeout,
+            max_rate_limit_retries=max_rate_limit_retries,
+            session=session,
         )
         self.users = UserEndpoints(self)
         self.teams = TeamEndpoints(self)
@@ -50,6 +62,13 @@ class Nuclino(Client):
     def get_team(self, team_id: str) -> Team:
         return self.teams.get_team(team_id)
 
+    def iter_teams(
+        self,
+        limit: int = 100,
+        after: Optional[str] = None,
+    ) -> Iterator[Team]:
+        return self.teams.iter_teams(limit=limit, after=after)
+
     def get_workspaces(
         self,
         team_id: Optional[str] = None,
@@ -61,22 +80,48 @@ class Nuclino(Client):
     def get_workspace(self, workspace_id: str) -> Workspace:
         return self.workspaces.get_workspace(workspace_id)
 
+    def iter_workspaces(
+        self,
+        team_id: Optional[str] = None,
+        limit: int = 100,
+        after: Optional[str] = None,
+    ) -> Iterator[Workspace]:
+        return self.workspaces.iter_workspaces(team_id=team_id, limit=limit, after=after)
+
     def get_items(
         self,
         team_id: Optional[str] = None,
         workspace_id: Optional[str] = None,
+        search: Optional[str] = None,
         limit: Optional[int] = None,
         after: Optional[str] = None,
     ) -> NuclinoList[Item | Collection]:
         return self.items.get_items(
             team_id=team_id,
             workspace_id=workspace_id,
+            search=search,
             limit=limit,
             after=after,
         )
 
     def get_item(self, item_id: str) -> Item | Collection:
         return self.items.get_item(item_id)
+
+    def iter_items(
+        self,
+        team_id: Optional[str] = None,
+        workspace_id: Optional[str] = None,
+        search: Optional[str] = None,
+        limit: int = 100,
+        after: Optional[str] = None,
+    ) -> Iterator[Item | Collection]:
+        return self.items.iter_items(
+            team_id=team_id,
+            workspace_id=workspace_id,
+            search=search,
+            limit=limit,
+            after=after,
+        )
 
     def create_item(
         self,
@@ -115,12 +160,14 @@ class Nuclino(Client):
         workspace_id: Optional[str] = None,
         parent_id: Optional[str] = None,
         title: Optional[str] = None,
+        content: Optional[str] = None,
         index: Optional[int] = None,
     ) -> Collection:
         return self.items.create_collection(
             workspace_id=workspace_id,
             parent_id=parent_id,
             title=title,
+            content=content,
             index=index,
         )
 
@@ -128,8 +175,9 @@ class Nuclino(Client):
         self,
         collection_id: str,
         title: Optional[str] = None,
+        content: Optional[str] = None,
     ) -> Collection:
-        return self.items.update_collection(collection_id, title=title)
+        return self.items.update_collection(collection_id, title=title, content=content)
 
     def delete_collection(self, collection_id: str) -> BaseDeleteResponse:
         return self.items.delete_collection(collection_id)

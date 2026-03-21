@@ -52,6 +52,30 @@ class NuclinoList(list[ListItem]):
             **deepcopy(self.metadata),
         }
 
+    @property
+    def next_cursor(self) -> str | None:
+        """Return the next pagination cursor when present in response metadata."""
+        value = self.metadata.get('nextCursor')
+        if value is None:
+            value = self.metadata.get('after')
+        return value if isinstance(value, str) and value else None
+
+    @property
+    def last_id(self) -> str | None:
+        """Return the last object's ID when available."""
+        if not self:
+            return None
+
+        last_item = self[-1]
+        if isinstance(last_item, NuclinoObject):
+            value = last_item["id"]
+        elif isinstance(last_item, Mapping):
+            value = cast(Mapping[str, Any], last_item).get("id")
+        else:
+            return None
+
+        return value if isinstance(value, str) and value else None
+
 
 LoaderResult = Union[T, NuclinoList[Any], dict[str, Any]]
 LoaderCallable = Callable[[Mapping[str, Any], NuclinoClient], LoaderResult]
@@ -88,6 +112,7 @@ class NuclinoObject:
     """
 
     _object: str = ''
+    _optional_fields: frozenset[str] = frozenset()
 
     @classmethod
     def load(cls: type[T], props: Mapping[str, Any], nuclino: NuclinoClient) -> T:
@@ -133,6 +158,8 @@ class NuclinoObject:
             alias = _snake_to_camel(name)
             if alias in self._data:
                 return self._data[alias]
+            if name in self._optional_fields or alias in self._optional_fields:
+                return None
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
     def get(self, key: str, default: Any = None) -> Any:

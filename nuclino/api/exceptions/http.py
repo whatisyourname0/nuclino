@@ -2,11 +2,13 @@
 
 from typing import Any, Mapping, Optional
 
-from .base import NuclinoBaseException
+from .base import NuclinoBaseException, NuclinoTransportError
 
 
 class NuclinoHTTPException(NuclinoBaseException):
     """Base exception for HTTP-related errors in the Nuclino API."""
+
+    category = "http"
 
     def __init__(
         self,
@@ -17,6 +19,8 @@ class NuclinoHTTPException(NuclinoBaseException):
         self.status_code = status_code
         self.message = message
         self.response_data = dict(response_data or {})
+        status = self.response_data.get("status")
+        self.response_status = status if isinstance(status, str) else None
         super().__init__(f"{status_code}: {message}")
 
 
@@ -58,8 +62,16 @@ class NuclinoServerError(NuclinoHTTPException):
     """Raised when server-side errors occur (HTTP 5xx)."""
 
 
-class NuclinoTimeoutError(NuclinoHTTPException):
-    """Raised when the request times out."""
+class NuclinoResponseFormatError(NuclinoHTTPException):
+    """Raised when a successful HTTP response does not match Nuclino's documented format."""
+
+    category = "response_format"
+
+
+class NuclinoTimeoutError(NuclinoTransportError):
+    """Raised when the request times out before receiving an HTTP response."""
+
+    category = "timeout"
 
 
 def raise_for_status_code(

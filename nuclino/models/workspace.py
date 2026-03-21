@@ -75,6 +75,7 @@ class Workspace(NuclinoObject):
     def create_collection(
         self,
         title: Optional[str] = None,
+        content: Optional[str] = None,
         index: Optional[int] = None
     ) -> 'Collection':
         '''
@@ -89,7 +90,7 @@ class Workspace(NuclinoObject):
             workspace_id=self["id"],
             object="collection",
             title=title,
-            content=None,
+            content=content,
             index=index
         )
 

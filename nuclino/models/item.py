@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, NotRequired, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, NotRequired, Optional, TypedDict, Union
 
 from .shared import NuclinoClient, NuclinoObject
 
@@ -19,7 +19,7 @@ class ContentMeta(TypedDict):
 class ItemProps(TypedDict):
     """Item properties as per API specification."""
 
-    object: str
+    object: Literal["item"]
     id: str
     workspaceId: str
     url: str
@@ -37,7 +37,7 @@ class ItemProps(TypedDict):
 class CollectionProps(TypedDict):
     """Collection properties as per API specification."""
 
-    object: str
+    object: Literal["collection"]
     id: str
     workspaceId: str
     url: str
@@ -56,6 +56,7 @@ class Item(NuclinoObject):
     """Item object as per API specification."""
 
     _object = "item"
+    _optional_fields = frozenset({"content", "highlight"})
     id: str
     workspace_id: str
     url: str
@@ -138,6 +139,7 @@ class Collection(NuclinoObject):
     """Collection object as per API specification."""
 
     _object = "collection"
+    _optional_fields = frozenset({"content", "highlight"})
     id: str
     workspace_id: str
     url: str
@@ -206,6 +208,7 @@ class Collection(NuclinoObject):
     def create_collection(
         self,
         title: Optional[str] = None,
+        content: Optional[str] = None,
         index: Optional[int] = None,
     ) -> 'Collection':
         """
@@ -222,6 +225,7 @@ class Collection(NuclinoObject):
             parent_id=self["id"],
             object="collection",
             title=title,
+            content=content,
             index=index,
         )
 
@@ -237,6 +241,7 @@ class Collection(NuclinoObject):
     def update(
         self,
         title: Optional[str] = None,
+        content: Optional[str] = None,
     ) -> 'Collection':
         """
         Update this collection.
@@ -247,7 +252,7 @@ class Collection(NuclinoObject):
         Returns:
             Updated Collection object.
         """
-        return self._nuclino.update_item(self["id"], title)
+        return self._nuclino.update_item(self["id"], title, content)
 
     def __repr__(self) -> str:
         return f'<Collection "{self["title"]}">'

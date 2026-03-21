@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from typing import Optional, cast
 
 from nuclino.api.client import Client
@@ -27,3 +28,24 @@ class TeamEndpoints:
 
     def get_team(self, team_id: str) -> Team:
         return cast(Team, self.client.get(f"/teams/{team_id}"))
+
+    def iter_teams(
+        self,
+        limit: int = 100,
+        after: Optional[str] = None,
+    ) -> Iterator[Team]:
+        seen_cursors: set[str] = set()
+        next_after = after
+
+        while True:
+            page = self.get_teams(limit=limit, after=next_after)
+            yield from page
+
+            next_cursor = page.next_cursor
+            if next_cursor is None and len(page) == limit:
+                next_cursor = page.last_id
+            if next_cursor is None or next_cursor in seen_cursors:
+                return
+
+            seen_cursors.add(next_cursor)
+            next_after = next_cursor

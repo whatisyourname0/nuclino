@@ -1,9 +1,9 @@
-from typing import List, Literal, Optional, TypedDict
+from typing import List, Literal, NotRequired, Optional, TypedDict
 
 # Field related types
 FieldType = Literal[
     "date", "text", "number", "currency", "select", "multiSelect",
-    "multiCollaborator", "createdBy", "lastUpdatedBy", "createdAt", "updatedAt"
+    "multiCollaborator", "createdBy", "lastUpdatedBy", "createdAt", "lastUpdatedAt"
 ]
 
 class SelectOption(TypedDict):
@@ -20,8 +20,8 @@ class FieldConfig(TypedDict, total=False):
 
 class FieldProps(TypedDict):
     """Field properties as per API specification"""
-    object: str
+    object: Literal["field"]
     id: str
     type: FieldType
     name: str
-    config: Optional[FieldConfig] 
+    config: NotRequired[Optional[FieldConfig]]

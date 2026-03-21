@@ -5,8 +5,9 @@ import requests
 from ratelimit import limits
 
 from nuclino.api.exceptions import (
-    NuclinoHTTPException,
+    NuclinoResponseFormatError,
     NuclinoTimeoutError,
+    NuclinoTransportError,
     raise_for_status_code,
 )
 from nuclino.api.utils import sleep_and_retry
@@ -14,6 +15,7 @@ from nuclino.models.shared import NuclinoList, NuclinoObject, get_loader
 
 BASE_URL = 'https://api.nuclino.com/v0'
 DEFAULT_REQUEST_TIMEOUT = 10.0
+DEFAULT_REQUESTS_PER_MINUTE = 150
 
 ResponseData = Union[NuclinoList[Any], NuclinoObject, Dict[str, Any]]
 
@@ -42,9 +44,10 @@ class Client:
         self,
         api_key: str,
         base_url: str = BASE_URL,
-        requests_per_minute: int = 140,
+        requests_per_minute: int = DEFAULT_REQUESTS_PER_MINUTE,
         request_timeout: float = DEFAULT_REQUEST_TIMEOUT,
         max_rate_limit_retries: int = 3,
+        session: requests.Session | None = None,
     ) -> None:
         """
         Initialize a new Nuclino API client.
@@ -55,6 +58,7 @@ class Client:
             requests_per_minute: Maximum number of requests allowed per minute.
             request_timeout: Request timeout in seconds.
             max_rate_limit_retries: Number of times to retry HTTP 429 responses.
+            session: Optional pre-configured requests session to use.
 
         Raises:
             ValueError: If api_key is empty, requests_per_minute is less than 1,
@@ -72,7 +76,8 @@ class Client:
         self.check_limit = sleep_and_retry()(
             limits(requests_per_minute, period=60)(lambda: None)
         )
-        self.session: requests.Session = requests.Session()
+        self._owns_session = session is None
+        self.session: requests.Session = session if session is not None else requests.Session()
         self.session.headers['Authorization'] = api_key
         self.base_url: str = base_url
         self.request_timeout: float = request_timeout
@@ -88,7 +93,8 @@ class Client:
 
     def close(self) -> None:
         """Close the session and clean up resources."""
-        self.session.close()
+        if self._owns_session:
+            self.session.close()
 
     def _extract_retry_after(self, response: requests.Response) -> Optional[int]:
         """Extract retry delay from standard headers or Nuclino error payloads."""
@@ -102,6 +108,9 @@ class Client:
         try:
             content = response.json()
         except ValueError:
+            return None
+
+        if not isinstance(content, Mapping):
             return None
 
         value = content.get("retry_after")
@@ -127,7 +136,7 @@ class Client:
         """
         if not 200 <= response.status_code < 300:
             try:
-                content = response.json()
+                raw_content = response.json()
             except ValueError:
                 raise_for_status_code(
                     response.status_code,
@@ -135,6 +144,14 @@ class Client:
                     {"raw_content": response.text},
                 )
 
+            if not isinstance(raw_content, Mapping):
+                raise_for_status_code(
+                    response.status_code,
+                    response.reason or "Request failed",
+                    {"raw_content": response.text},
+                )
+
+            content = dict(raw_content)
             message = content.get('message', 'Unknown error')
             if response.status_code == 429 and 'retry_after' not in content:
                 retry_after = self._extract_retry_after(response)
@@ -146,7 +163,7 @@ class Client:
             return {}
 
         try:
-            content = response.json()
+            raw_content = response.json()
         except ValueError:
             raise_for_status_code(
                 response.status_code,
@@ -154,10 +171,36 @@ class Client:
                 {"raw_content": response.text},
             )
 
-        if 'data' not in content:
-            return content
+        if not isinstance(raw_content, Mapping):
+            raise NuclinoResponseFormatError(
+                response.status_code,
+                "Invalid JSON response from API",
+                {"raw_content": response.text},
+            )
 
-        return self.parse(content['data'])
+        content = dict(raw_content)
+        if content.get("status") != "success":
+            raise NuclinoResponseFormatError(
+                response.status_code,
+                "Invalid API response status",
+                content,
+            )
+        if 'data' not in content:
+            raise NuclinoResponseFormatError(
+                response.status_code,
+                "Invalid API response: missing data",
+                content,
+            )
+
+        data = content['data']
+        if not isinstance(data, Mapping):
+            raise NuclinoResponseFormatError(
+                response.status_code,
+                "Invalid JSON response from API",
+                content,
+            )
+
+        return self.parse(data)
 
     def parse(self, source: Mapping[str, Any]) -> ResponseData:
         """
@@ -217,13 +260,11 @@ class Client:
                 )
             except requests.Timeout as exc:
                 raise NuclinoTimeoutError(
-                    408,
                     "Request timed out",
                     {"method": method, "path": path},
                 ) from exc
             except requests.RequestException as exc:
-                raise NuclinoHTTPException(
-                    0,
+                raise NuclinoTransportError(
                     str(exc),
                     {"method": method, "path": path},
                 ) from exc

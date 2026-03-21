@@ -69,6 +69,32 @@ def test_snake_case_attribute_access_matches_public_annotations() -> None:
     assert file.item_id == "item-1"
 
 
+def test_optional_attributes_return_none_without_mutating_payload() -> None:
+    dummy = DummyNuclino()
+    listed_item = Item(
+        cast(ItemProps, {key: value for key, value in item_payload().items() if key != "content"}),
+        dummy,
+    )
+    user = User(
+        cast(
+            UserProps,
+            {
+                "object": "user",
+                "id": "user-1",
+                "firstName": "Ada",
+                "lastName": "Lovelace",
+                "email": "ada@example.com",
+            },
+        ),
+        dummy,
+    )
+
+    assert listed_item.content is None
+    assert listed_item.highlight is None
+    assert "content" not in listed_item.to_dict()
+    assert user.avatar_url is None
+
+
 def test_to_dict_returns_deep_copy_for_nested_data() -> None:
     item = Item(cast(ItemProps, item_payload()), DummyNuclino())
 
@@ -105,3 +131,17 @@ def test_parse_tolerates_unknown_object_types() -> None:
     client.close()
 
     assert parsed == {"object": "mystery", "id": "m-1"}
+
+
+def test_collection_and_workspace_helpers_accept_collection_content() -> None:
+    dummy = DummyNuclino()
+    collection = Collection(cast(CollectionProps, collection_payload()), dummy)
+    workspace = Workspace(cast(WorkspaceProps, workspace_payload()), dummy)
+
+    created_from_collection = collection.create_collection(title="Nested", content="Body\n")
+    updated_collection = collection.update(content="Updated\n")
+    created_from_workspace = workspace.create_collection(title="Nested", content="Body\n")
+
+    assert created_from_collection["content"] == "Body\n"
+    assert updated_collection["content"] == "Updated\n"
+    assert created_from_workspace["content"] == "Body\n"

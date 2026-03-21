@@ -4,7 +4,7 @@ from typing import Any, Callable, Optional, TypeVar
 
 from ratelimit.exception import RateLimitException
 
-from nuclino.api.exceptions import NuclinoValidationError
+from nuclino.api.exceptions import NuclinoClientValidationError
 
 T = TypeVar('T', bound=Callable[..., Any])
 
@@ -32,7 +32,7 @@ def validate_limit(limit: Optional[int]) -> Optional[int]:
     if limit is None:
         return None
     if not 1 <= limit <= 100:
-        raise NuclinoValidationError(400, "limit must be between 1 and 100")
+        raise NuclinoClientValidationError("limit must be between 1 and 100")
     return limit
 
 
@@ -42,13 +42,13 @@ def validate_parent_scope(
 ) -> None:
     """Require exactly one creation scope for items and collections."""
     if workspace_id is None and parent_id is None:
-        raise NuclinoValidationError(400, "Must specify either workspace_id or parent_id")
+        raise NuclinoClientValidationError("Must specify either workspace_id or parent_id")
     if workspace_id is not None and parent_id is not None:
-        raise NuclinoValidationError(400, "Cannot specify both workspace_id and parent_id")
+        raise NuclinoClientValidationError("Cannot specify both workspace_id and parent_id")
 
 
 def validate_item_object(object_name: str) -> str:
     """Validate supported Nuclino item object values."""
     if object_name not in {"item", "collection"}:
-        raise NuclinoValidationError(400, "object must be either 'item' or 'collection'")
+        raise NuclinoClientValidationError("object must be either 'item' or 'collection'")
     return object_name
